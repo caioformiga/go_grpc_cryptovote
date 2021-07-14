@@ -51,6 +51,7 @@ link: https://chromium.googlesource.com/external/github.com/golang/protobuf/+/re
 cryptovotepb/go_grpc_cryptovote.proto 
 option go_package = "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb";
 
+cd $GOPATH/src/github.com/caioformiga/go_grpc_cryptovote
 
 protoc --go_out=paths=source_relative:. cryptovotepb/go_grpc_cryptovote.proto
 result: $GOPATH/src/github.com/caioformiga/go_grpc_cryptovote/cryptovotepb/go_grpc_cryptovote.pb.go
