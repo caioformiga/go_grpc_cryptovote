@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-service CryptoVote {
+package cryptovote;
+
+service CryptoVoteService {
 
     // Obtains all CryptoCurrency    
     rpc ListAllCryptoCurrencies(EmptyReq) returns (GetCryptocurrencyResponse) {}
