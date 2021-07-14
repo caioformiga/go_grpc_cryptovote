@@ -1,0 +1,10 @@
+func (s *cryptoVoteServiceServer) ListAllCryptoVotes(ctx context.Context, empty *pb.EmptyReq) (*pb.ListAllCryptoVoteResponse, error) {
+	for _, cryptoVotes := range s.savedCryptoVotes {
+		//função para comparar os valores salvos na menssage
+		if proto.Equal(cryptoVotes, empty) {
+			return cryptoVotes, nil
+		}
+	}
+	// se estiver vazio
+	return &pb.ListAllCryptoVoteResponse{Cryptovotes: cryptoVotes}, nil
+}
