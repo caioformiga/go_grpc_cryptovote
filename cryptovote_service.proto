@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+service CryptoVote {
+
+    // Obtains all CryptoCurrency    
+    rpc ListAllCryptoCurrencies(EmptyReq) returns (GetCryptocurrencyResponse) {}
+
+    rpc GetStreamCryptoCurrencies(EmptyReq) returns (stream Cryptocurrency) {}
+
+
+    // Obtains all CryptoVote
+    rpc ListAllCryptoVotes(EmptyReq) returns (GetCryptoVoteResponse) {}
+
+    rpc GetStreamCryptoVotes(EmptyReq) returns (stream CryptoVote) {}
+}
+
+// The EmptyReq message containing the CryptoVote data.
+message EmptyReq {}
+
+
+// GetCryptocurrencyResponse message
+message GetCryptocurrencyResponse {
+  // uma lista de Cryptocurrency
+  repeated Cryptocurrency currencies = 1;
+}
+
+// GetCryptoVoteResponse message
+message GetCryptoVoteResponse {
+  // uma lista de CryptoVote
+  repeated CryptoVote cyptovotes = 1;
+}
+
+
+// The CryptoVote message containing the CryptoVote data.
+message CryptoVote {    
+    Cryptocurrency crypto = 1;
+    int32 qtd_upvote = 2;
+    int32 qtd_downvote = 3
+    string idHex = 4;
+}
+
+// The Cryptocurrency message containing as Cryptocurrency
+message Cryptocurrency {
+    string name = 1;
+    string symbol = 2;
+}
