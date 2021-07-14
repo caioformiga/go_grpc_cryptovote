@@ -6,6 +6,7 @@ package main
 // source: https://github.com/grpc/grpc-go/blob/master/examples/route_guide/server/server.go
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -19,6 +20,9 @@ import (
 	pb "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb"
 )
 
+/*
+TODO usar env pois quaando for rodar em kubernetes fafilita a customização pelo config (yaml)
+*/
 var (
 	tls      = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
 	certFile = flag.String("cert_file", "", "The TLS cert file")
@@ -39,8 +43,8 @@ type cryptoVoteServiceServer struct {
 }
 
 func (s *cryptoVoteServiceServer) ListAllCryptoCurrencies(empty *pb.EmptyReq, stream pb.CryptoVoteService_ListAllCryptoCurrenciesServer) error {
-	for _, cryptoCurrencis := range s.savedCryptoCurrencis {
-		if err := stream.Send(cryptoCurrencis); err != nil {
+	for _, cryptoCurrency := range s.savedCryptoCurrencis {
+		if err := stream.Send(cryptoCurrency); err != nil {
 			return err
 		}
 	}
@@ -49,19 +53,34 @@ func (s *cryptoVoteServiceServer) ListAllCryptoCurrencies(empty *pb.EmptyReq, st
 }
 
 // loadCryptoCurrencisFromMongoDB carrega CryptoCurrencis do MongoDB
-func (s *cryptoVoteServiceServer) loadCryptoCurrencisFromMongoDB() {
-	/*
-		data = recuperar todas as cryptoccurencis do banco
+func (s *cryptoVoteServiceServer) loadCryptoCurrencis() {
+	var data []byte = exampleData
+	if err := json.Unmarshal(data, &s.savedCryptoCurrencis); err != nil {
+		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleData: %v", err)
+	}
+}
 
-		if err := json.Unmarshal(data, &s.savedCryptoCurrencis); err != nil {
-			log.Fatalf("Erro ao tentar recuperar  CryptoCurrencis do MongoDB: %v", err)
-		}
-	*/
+// imprime no console do servidor
+func (s *cryptoVoteServiceServer) printAllCrypto() {
+	log.Printf("Available Crypto's:")
+	for i, cryptoCurrency := range s.savedCryptoCurrencis {
+		log.Printf("Crypto index: %d", i)
+		log.Printf("Crypto Name: %v", cryptoCurrency.Name)
+		log.Printf("Crypto Symbol: %v", cryptoCurrency.Symbol)
+		log.Printf("\n")
+	}
+}
+
+// imprime no console do servidor
+func (s *cryptoVoteServiceServer) printServerInfo() {
+	log.Printf("Cryptovote service is a web server using gRPC")
 }
 
 func newServer() *cryptoVoteServiceServer {
 	s := &cryptoVoteServiceServer{}
-	s.loadCryptoCurrencisFromMongoDB()
+	s.printServerInfo()
+	s.loadCryptoCurrencis()
+	s.printAllCrypto()
 	return s
 }
 
@@ -89,9 +108,22 @@ func main() {
 	cryptovoteGrpcServer := grpc.NewServer(opts...)
 
 	pb.RegisterCryptoVoteServiceServer(cryptovoteGrpcServer, newServer())
-
-	log.Printf("cryptovote service is a web server using gRPC")
 	log.Printf("listening at %v", lis.Addr())
-
 	cryptovoteGrpcServer.Serve(lis)
 }
+
+// exampleData is a json object baseado em CryptoCurrency message
+/*
+   string name = 1;
+   string symbol = 2;
+*/
+var exampleData = []byte(`[{
+    "name": "Bitcoin",
+    "symbol": "BTC"
+}, {
+	"name": "Ethereum",
+    "symbol": "ETH"
+}, {	
+	"name": "Klever",
+    "symbol": "KLV"
+}]`)
