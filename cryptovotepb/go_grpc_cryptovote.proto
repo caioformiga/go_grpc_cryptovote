@@ -5,7 +5,8 @@ option go_package = "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb";
 package cryptovotepb;
 
 // The EmptyReq message containing the CryptoVote data.
-message EmptyReq {}
+message EmptyReq {  
+}
 
 // The CryptoVote message containing the CryptoVote data.
 message CryptoVote {    

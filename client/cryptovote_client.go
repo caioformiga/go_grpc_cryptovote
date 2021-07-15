@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
 
 	//"io"
 	"log"
@@ -27,14 +28,25 @@ func printAllCrypto(client pb.CryptoVoteServiceClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var empty *pb.EmptyReq
+	log.Printf("Faz uma chamada a função rpc ListAllCryptoCurrencies detalhes em go_grpc_cryptovote_grpc.pb.go ")
+	stream, err := client.ListAllCryptoCurrencies(ctx, &pb.EmptyReq{})
+	log.Printf("Finanlizou!")
 
-	retorno, err := client.ListAllCryptoCurrencies(ctx, empty)
+	log.Printf("Recuperando todoas as Crypto's...")
 	if err != nil {
-		log.Fatalf("%v.ListAllCryptoCurrencies(_) = _, %v: ", client, err)
+		log.Fatalf("%v.ListAllCryptoCurrencies(_) = _, %v", client, err)
 	}
-	log.Printf("Recuperando todoas as Cryptos\n")
-	log.Println(retorno)
+	for {
+		crypto, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("%v.ListAllCryptoCurrencies(_) = _, %v", client, err)
+		}
+		log.Printf("Crypto Name:%v\n", crypto.GetName())
+		log.Printf("Crypto Symbol:%v\n", crypto.GetSymbol())
+	}
 }
 
 func main() {
@@ -54,9 +66,11 @@ func main() {
 	}
 
 	opts = append(opts, grpc.WithBlock())
+
+	// tenta criar uma conexao com o referido serverAddr = "localhost:10000"
 	conn, err := grpc.Dial(*serverAddr, opts...)
 	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
+		log.Fatalf("Nao conseguiu fazer conexao com o servidor: %v", err)
 	}
 	defer conn.Close()
 	cryptovoteGrpcClient := pb.NewCryptoVoteServiceClient(conn)
