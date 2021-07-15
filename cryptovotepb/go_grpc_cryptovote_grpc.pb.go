@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 type CryptoVoteServiceClient interface {
 	// Obtains all CryptoCurrency using a Server-Side Streaming RPC
 	ListAllCryptoCurrencies(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoCurrenciesClient, error)
+	// Obtains all CryptoVotes using a Server-Side Streaming RPC
+	ListAllCryptoVotes(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoVotesClient, error)
 }
 
 type cryptoVoteServiceClient struct {
@@ -62,12 +64,46 @@ func (x *cryptoVoteServiceListAllCryptoCurrenciesClient) Recv() (*CryptoCurrency
 	return m, nil
 }
 
+func (c *cryptoVoteServiceClient) ListAllCryptoVotes(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoVotesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CryptoVoteService_ServiceDesc.Streams[1], "/cryptovotepb.CryptoVoteService/ListAllCryptoVotes", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &cryptoVoteServiceListAllCryptoVotesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CryptoVoteService_ListAllCryptoVotesClient interface {
+	Recv() (*CryptoVote, error)
+	grpc.ClientStream
+}
+
+type cryptoVoteServiceListAllCryptoVotesClient struct {
+	grpc.ClientStream
+}
+
+func (x *cryptoVoteServiceListAllCryptoVotesClient) Recv() (*CryptoVote, error) {
+	m := new(CryptoVote)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CryptoVoteServiceServer is the server API for CryptoVoteService service.
 // All implementations must embed UnimplementedCryptoVoteServiceServer
 // for forward compatibility
 type CryptoVoteServiceServer interface {
 	// Obtains all CryptoCurrency using a Server-Side Streaming RPC
 	ListAllCryptoCurrencies(*EmptyReq, CryptoVoteService_ListAllCryptoCurrenciesServer) error
+	// Obtains all CryptoVotes using a Server-Side Streaming RPC
+	ListAllCryptoVotes(*EmptyReq, CryptoVoteService_ListAllCryptoVotesServer) error
 	mustEmbedUnimplementedCryptoVoteServiceServer()
 }
 
@@ -77,6 +113,9 @@ type UnimplementedCryptoVoteServiceServer struct {
 
 func (UnimplementedCryptoVoteServiceServer) ListAllCryptoCurrencies(*EmptyReq, CryptoVoteService_ListAllCryptoCurrenciesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListAllCryptoCurrencies not implemented")
+}
+func (UnimplementedCryptoVoteServiceServer) ListAllCryptoVotes(*EmptyReq, CryptoVoteService_ListAllCryptoVotesServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListAllCryptoVotes not implemented")
 }
 func (UnimplementedCryptoVoteServiceServer) mustEmbedUnimplementedCryptoVoteServiceServer() {}
 
@@ -112,6 +151,27 @@ func (x *cryptoVoteServiceListAllCryptoCurrenciesServer) Send(m *CryptoCurrency)
 	return x.ServerStream.SendMsg(m)
 }
 
+func _CryptoVoteService_ListAllCryptoVotes_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(EmptyReq)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CryptoVoteServiceServer).ListAllCryptoVotes(m, &cryptoVoteServiceListAllCryptoVotesServer{stream})
+}
+
+type CryptoVoteService_ListAllCryptoVotesServer interface {
+	Send(*CryptoVote) error
+	grpc.ServerStream
+}
+
+type cryptoVoteServiceListAllCryptoVotesServer struct {
+	grpc.ServerStream
+}
+
+func (x *cryptoVoteServiceListAllCryptoVotesServer) Send(m *CryptoVote) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // CryptoVoteService_ServiceDesc is the grpc.ServiceDesc for CryptoVoteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -123,6 +183,11 @@ var CryptoVoteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ListAllCryptoCurrencies",
 			Handler:       _CryptoVoteService_ListAllCryptoCurrencies_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListAllCryptoVotes",
+			Handler:       _CryptoVoteService_ListAllCryptoVotes_Handler,
 			ServerStreams: true,
 		},
 	},

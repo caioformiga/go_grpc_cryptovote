@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 
 	"google.golang.org/grpc"
 
@@ -38,9 +39,11 @@ type cryptoVoteServiceServer struct {
 	//retornos do tipo streams definidos no cryptoVoteServiceServer do arquivo go_grpc_cryptovote.proto
 	savedCryptoCurrencis []*pb.CryptoCurrency
 
+	//retornos do tipo streams definidos no cryptoVoteServiceServer do arquivo go_grpc_cryptovote.proto
+	savedCryptoVotes []*pb.CryptoVote
+
 	// protege cryptovotes de serem computados simultaneamente
-	// savedCryptoVotes []*pb.CryptoVote
-	// mutex sync.Mutex
+	mutex sync.Mutex
 }
 
 func (s *cryptoVoteServiceServer) ListAllCryptoCurrencies(empty *pb.EmptyReq, stream pb.CryptoVoteService_ListAllCryptoCurrenciesServer) error {
@@ -53,16 +56,47 @@ func (s *cryptoVoteServiceServer) ListAllCryptoCurrencies(empty *pb.EmptyReq, st
 	return nil
 }
 
-// loadCryptoCurrencisFromMongoDB carrega CryptoCurrencis do MongoDB
+func (s *cryptoVoteServiceServer) ListAllCryptoVotes(empty *pb.EmptyReq, stream pb.CryptoVoteService_ListAllCryptoVotesServer) error {
+	for _, cryptoVotes := range s.savedCryptoVotes {
+		if err := stream.Send(cryptoVotes); err != nil {
+			return err
+		}
+	}
+	// se estiver vazio
+	return nil
+}
+
+// loadCryptoCurrencisFromMongoDB carrega CryptoCurrencis
 func (s *cryptoVoteServiceServer) loadCryptoCurrencis() {
-	var data []byte = exampleData
+	var data []byte = exampleDataCryptoCurrencies
 	if err := json.Unmarshal(data, &s.savedCryptoCurrencis); err != nil {
-		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleData: %v", err)
+		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleDataCryptoCurrencies: %v", err)
+	}
+}
+
+// loadCryptoCurrencisFromMongoDB carrega CryptoVotes
+func (s *cryptoVoteServiceServer) loadCryptoVotes() {
+	var data []byte = exampleDataCryptoVotes
+	if err := json.Unmarshal(data, &s.savedCryptoVotes); err != nil {
+		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleDataCryptoVotes: %v", err)
 	}
 }
 
 // imprime no console do servidor
-func (s *cryptoVoteServiceServer) printAllCrypto() {
+func (s *cryptoVoteServiceServer) printAllCryptoVotes() {
+	log.Printf("Available Crypto's:")
+	for i, cryptoVote := range s.savedCryptoVotes {
+		log.Printf("Crypto index: %d", i)
+		log.Printf("Crypto Name: %v", cryptoVote.Crypto.Name)
+		log.Printf("Crypto Symbol: %v", cryptoVote.Crypto.Symbol)
+		log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
+		log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
+		log.Printf("\n")
+	}
+}
+
+// imprime no console do servidor
+func (s *cryptoVoteServiceServer) printAllCryptoCurrencis() {
 	log.Printf("Available Crypto's:")
 	for i, cryptoCurrency := range s.savedCryptoCurrencis {
 		log.Printf("Crypto index: %d", i)
@@ -81,7 +115,9 @@ func newServer() *cryptoVoteServiceServer {
 	s := &cryptoVoteServiceServer{}
 	s.printServerInfo()
 	s.loadCryptoCurrencis()
-	s.printAllCrypto()
+	s.loadCryptoVotes()
+	s.printAllCryptoCurrencis()
+	s.printAllCryptoVotes()
 	return s
 }
 
@@ -109,7 +145,7 @@ func main() {
 	cryptovoteGrpcServer := grpc.NewServer(opts...)
 	pb.RegisterCryptoVoteServiceServer(cryptovoteGrpcServer, newServer())
 
-	// registranndo o servidor como reflection service para usar o gRPCui
+	// registranndo o servidor como reflection service para usar o gRPCuic
 	reflection.Register(cryptovoteGrpcServer)
 
 	log.Printf("listening at %v", lis.Addr())
@@ -117,12 +153,12 @@ func main() {
 	cryptovoteGrpcServer.Serve(lis)
 }
 
-// exampleData is a json object baseado em CryptoCurrency message
+// exampleDataCryptoCurrencies é um objeto json baseado em CryptoCurrency message
 /*
    string name = 1;
    string symbol = 2;
 */
-var exampleData = []byte(`[{
+var exampleDataCryptoCurrencies = []byte(`[{
     "name": "Bitcoin",
     "symbol": "BTC"
 }, {
@@ -131,4 +167,34 @@ var exampleData = []byte(`[{
 }, {	
 	"name": "Klever",
     "symbol": "KLV"
+}]`)
+
+// exampleDataCryptoVote é um objeto json baseado em CryptoVotes message
+/*
+   CryptoCurrency crypto = 1;
+   int32 qtd_upvote = 2;
+   int32 qtd_downvote = 3;
+   string idHex = 4;
+*/
+var exampleDataCryptoVotes = []byte(`[{
+	"crypto": {
+		"name": "Bitcoin",
+    	"symbol": "BTC"
+	},
+    "qtd_upvote": 0,
+	"qtd_downvote": 0
+}, {
+	"crypto": {
+		"name": "Ethereum",
+    	"symbol": "ETH"
+	},
+    "qtd_upvote": 0,
+	"qtd_downvote": 0
+}, {
+	"crypto": {
+		"name": "Klever",
+		"symbol": "KLV"
+	},
+    "qtd_upvote": 0,
+	"qtd_downvote": 0	
 }]`)

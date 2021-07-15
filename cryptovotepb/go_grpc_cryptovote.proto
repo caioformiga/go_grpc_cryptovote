@@ -28,7 +28,7 @@ service CryptoVoteService {
   rpc ListAllCryptoCurrencies(EmptyReq) returns (stream CryptoCurrency) {}
 
   // Obtains all CryptoVotes using a Server-Side Streaming RPC
-  // rpc GetStreamCryptoVotes(EmptyReq) returns (stream CryptoVote) {}
+  rpc ListAllCryptoVotes(EmptyReq) returns (stream CryptoVote) {}
 }
 
 
