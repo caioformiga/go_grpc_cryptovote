@@ -109,7 +109,7 @@ func main() {
 	cryptovoteGrpcServer := grpc.NewServer(opts...)
 	pb.RegisterCryptoVoteServiceServer(cryptovoteGrpcServer, newServer())
 
-	// Register reflection service on gRPC server.
+	// registranndo o servidor como reflection service para usar o gRPCui
 	reflection.Register(cryptovoteGrpcServer)
 
 	log.Printf("listening at %v", lis.Addr())
