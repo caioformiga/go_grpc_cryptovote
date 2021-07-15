@@ -16,6 +16,7 @@ import (
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/examples/data"
+	"google.golang.org/grpc/reflection"
 
 	pb "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb"
 )
@@ -106,9 +107,13 @@ func main() {
 	}
 
 	cryptovoteGrpcServer := grpc.NewServer(opts...)
-
 	pb.RegisterCryptoVoteServiceServer(cryptovoteGrpcServer, newServer())
+
+	// Register reflection service on gRPC server.
+	reflection.Register(cryptovoteGrpcServer)
+
 	log.Printf("listening at %v", lis.Addr())
+
 	cryptovoteGrpcServer.Serve(lis)
 }
 
