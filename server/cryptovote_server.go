@@ -20,7 +20,10 @@ import (
 	"google.golang.org/grpc/examples/data"
 	"google.golang.org/grpc/reflection"
 
-	bo "github.com/caioformiga/go_mongodb_crud_cryptovote/bo"
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/caioformiga/go_mongodb_crud_cryptovote/bo"
+	"github.com/caioformiga/go_mongodb_crud_cryptovote/model"
 
 	pb "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb"
 )
@@ -40,105 +43,128 @@ type cryptoVoteServiceServer struct {
 	pb.UnimplementedCryptoVoteServiceServer
 
 	//retornos do tipo streams definidos no cryptoVoteServiceServer do arquivo go_grpc_cryptovote.proto
-	savedCryptoCurrencis []*pb.CryptoCurrency
-
-	//retornos do tipo streams definidos no cryptoVoteServiceServer do arquivo go_grpc_cryptovote.proto
-	savedCryptoVotes []*pb.CryptoVote
+	cachedCryptoVotes []*pb.CryptoVote
 
 	// protege cryptovotes de serem computados simultaneamente
 	mutex sync.Mutex
 }
 
-func (s *cryptoVoteServiceServer) ListAllCryptoCurrencies(empty *pb.EmptyReq, stream pb.CryptoVoteService_ListAllCryptoCurrenciesServer) error {
-	for _, cryptoCurrency := range s.savedCryptoCurrencis {
-		if err := stream.Send(cryptoCurrency); err != nil {
-			return err
-		}
+// Handler dos services definidos em go_grpc_cryptovote_grpc.pb.go
+/*
+	RetrieveAllCryptoVoteByFilter recupera todos os CryptoVotes encapulados em uma struct pb.CryptoVote
+	primeiro tenta recuperar da memoria (cachedCryptoVotes), caso essteja vazio faz uma busca no banco de
+	dados e carrega os dado na memoria
+*/
+func (s *cryptoVoteServiceServer) RetrieveAllCryptoVoteByFilter(filter *pb.FilterCryptoVote, stream pb.CryptoVoteService_RetrieveAllCryptoVoteByFilterServer) error {
+	if len(s.cachedCryptoVotes) <= 0 {
+		s.loadCryptoVotes()
 	}
-	// se estiver vazio
-	return nil
-}
 
-func (s *cryptoVoteServiceServer) ListAllCryptoVotes(empty *pb.EmptyReq, stream pb.CryptoVoteService_ListAllCryptoVotesServer) error {
-	for _, cryptoVotes := range s.savedCryptoVotes {
+	for _, cryptoVotes := range s.cachedCryptoVotes {
 		if err := stream.Send(cryptoVotes); err != nil {
 			return err
 		}
 	}
-	// se estiver vazio
 	return nil
 }
 
-func (s *cryptoVoteServiceServer) CreateCryptoCurrency(ctx context.Context, newCryptoCurrency *pb.CryptoCurrency) (*pb.CryptoCurrency, error) {
-	mongoCryptoCurrency, err := bo.CreateCryptoCurrency(newCryptoCurrency.Name, newCryptoCurrency.Symbol)
+func (s *cryptoVoteServiceServer) CreateCryptoVote(ctx context.Context, messageCryptoVote *pb.CryptoVote) (*pb.CryptoVote, error) {
+
+	modelCryptoVote, err := TranslateToModelCryptoVote(messageCryptoVote)
+	if err != nil {
+		log.Fatalf("Problemas para traduzir dados: %v", err)
+	}
+
+	modelCryptoVote, err = bo.CreateCryptoVote(modelCryptoVote.Name, modelCryptoVote.Symbol, modelCryptoVote.Qtd_Upvote, modelCryptoVote.Qtd_Downvote)
 	if err != nil {
 		log.Fatalf("Problemas para salvar dados: %v", err)
 	}
-	log.Printf("mongoCryptoCurrency: %v", mongoCryptoCurrency)
-	return newCryptoCurrency, err
-}
+	log.Printf("modelCryptoVote: %v", modelCryptoVote)
 
-func (s *cryptoVoteServiceServer) RetrieveAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
-	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
-	return filter.Crypto, nil
-}
-
-func (s *cryptoVoteServiceServer) UpdateAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
-	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
-	return filter.Crypto, nil
-}
-
-func (s *cryptoVoteServiceServer) DeleteAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
-	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
-	return filter.Crypto, nil
-}
-
-// loadCryptoCurrencisFromMongoDB carrega CryptoCurrencis
-func (s *cryptoVoteServiceServer) loadCryptoCurrencis() {
-	var data []byte = exampleDataCryptoCurrencies
-	if err := json.Unmarshal(data, &s.savedCryptoCurrencis); err != nil {
-		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleDataCryptoCurrencies: %v", err)
+	messageCryptoVote, err = TranslateToMessageCryptoVote(modelCryptoVote)
+	if err != nil {
+		log.Fatalf("Problemas para traduzir dados: %v", err)
 	}
+	return messageCryptoVote, err
 }
 
-// loadCryptoCurrencisFromMongoDB carrega CryptoVotes
+func (s *cryptoVoteServiceServer) UpdateAllCryptoVoteByFilter(ctx context.Context, filter *pb.FilterCryptoVote) (*pb.CryptoVote, error) {
+	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	return filter.Crypto, nil
+}
+
+func (s *cryptoVoteServiceServer) DeleteAllCryptoVoteByFilter(ctx context.Context, filter *pb.FilterCryptoVote) (*pb.CryptoVote, error) {
+	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	return filter.Crypto, nil
+}
+
+// loadCryptoVotesFromMongoDB carrega CryptoVotes
 func (s *cryptoVoteServiceServer) loadCryptoVotes() {
-	var data []byte = exampleDataCryptoVotes
-	if err := json.Unmarshal(data, &s.savedCryptoVotes); err != nil {
-		log.Fatalf("Erro ao tentar recuperar CryptoCurrencis de exampleDataCryptoVotes: %v", err)
-	}
-}
+	var modelDataCryptoVotes []model.CryptoVote
 
-// imprime no console todos os campos do
-func printCryptoVotesToString(cryptoVote *pb.CryptoVote) {
-	log.Printf("Crypto Name: %v", cryptoVote.Crypto.Name)
-	log.Printf("Crypto Symbol: %v", cryptoVote.Crypto.Symbol)
-	log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
-	log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
+	// filtro vazio para recuperar todos os dados do bancp
+	filter := bson.M{}
+	modelDataCryptoVotes, err := bo.RetrieveAllCryptoVoteByFilter(filter)
+	if err != nil {
+		log.Fatalf("Problemas para recuperar dados: %v", err)
+	}
+	if len(modelDataCryptoVotes) > 0 {
+		log.Print("Crypto do banco de dados...")
+
+		// convertendo de model.CryptoVote para json
+		jsonData, err := json.Marshal(modelDataCryptoVotes)
+		if err != nil {
+			log.Fatalf("Problemas para fazer Marshal: %v", err)
+		} else {
+			// convertendo de json para []pb.CryptoVote
+			err := json.Unmarshal(jsonData, &s.cachedCryptoVotes)
+			if err != nil {
+				log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em cachedCryptoVotes: %v", err)
+			}
+		}
+	} else {
+		log.Print("Crypto do arquivo jsonDefalutDataCryptoVotes...")
+
+		if len(jsonDefalutDataCryptoVotes) > 0 {
+			// convertendo de json para []model.CryptoVote
+			err := json.Unmarshal(jsonDefalutDataCryptoVotes, &modelDataCryptoVotes)
+			if err != nil {
+				log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em modelDataCryptoVotes: %v", err)
+			} else {
+				// depois do Unmarshal se tiver CryptoVote
+				// para cada CryptoVote faz um create
+				if len(modelDataCryptoVotes) > 0 {
+					for _, modelCryptoVote := range modelDataCryptoVotes {
+
+						name := modelCryptoVote.Name
+						symbol := modelCryptoVote.Symbol
+						qtd_upvote := modelCryptoVote.Qtd_Upvote
+						qtd_downvote := modelCryptoVote.Qtd_Downvote
+
+						modelCryptoVote, err = bo.CreateCryptoVote(name, symbol, qtd_upvote, qtd_downvote)
+						if err != nil {
+							log.Fatalf("Problemas para salvar dados: %v", err)
+						}
+					}
+				}
+			}
+		}
+		// convertendo de json para []pb.CryptoVote
+		if err := json.Unmarshal(jsonDefalutDataCryptoVotes, &s.cachedCryptoVotes); err != nil {
+			log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em cachedCryptoVotes: %v", err)
+		}
+	}
 }
 
 // imprime no console do servidor
 func (s *cryptoVoteServiceServer) printAllCryptoVotes() {
 	log.Printf("Available Crypto's:")
-	for i, cryptoVote := range s.savedCryptoVotes {
+	for i, cryptoVote := range s.cachedCryptoVotes {
 		log.Printf("Crypto index: %d", i)
-		printCryptoVotesToString(cryptoVote)
-		log.Printf("\n")
-	}
-}
-
-// imprime no console todos os campos do
-func printCryptoCurrencisToString(cryptoCurrency *pb.CryptoCurrency) {
-	log.Printf("Crypto Name: %v", cryptoCurrency.Name)
-	log.Printf("Crypto Symbol: %v", cryptoCurrency.Symbol)
-}
-
-// imprime no console do servidor
-func (s *cryptoVoteServiceServer) printAllCryptoCurrencis() {
-	log.Printf("Available Crypto's:")
-	for i, cryptoCurrency := range s.savedCryptoCurrencis {
-		log.Printf("Crypto index: %d", i)
-		printCryptoCurrencisToString(cryptoCurrency)
+		log.Printf("Crypto Name: %v", cryptoVote.Name)
+		log.Printf("Crypto Symbol: %v", cryptoVote.Symbol)
+		log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
+		log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
 		log.Printf("\n")
 	}
 }
@@ -151,9 +177,7 @@ func (s *cryptoVoteServiceServer) printServerInfo() {
 func newServer() *cryptoVoteServiceServer {
 	s := &cryptoVoteServiceServer{}
 	s.printServerInfo()
-	s.loadCryptoCurrencis()
 	s.loadCryptoVotes()
-	s.printAllCryptoCurrencis()
 	s.printAllCryptoVotes()
 	return s
 }
@@ -190,48 +214,26 @@ func main() {
 	cryptovoteGrpcServer.Serve(lis)
 }
 
-// exampleDataCryptoCurrencies é um objeto json baseado em CryptoCurrency message
+// jsonDefalutDataCryptoVotes é um objeto json baseado em CryptoVote message
 /*
-   string name = 1;
-   string symbol = 2;
+    string name = 1;
+	string symbol = 2;
+	int32 qtd_upvote = 3;
+	int32 qtd_downvote = 4;
 */
-var exampleDataCryptoCurrencies = []byte(`[{
-    "name": "Bitcoin",
-    "symbol": "BTC"
+var jsonDefalutDataCryptoVotes = []byte(`[{
+	"name": "Bitcoin",
+    "symbol": "BTC",
+	"qtd_upvote": 0,
+	"qtd_downvote": 0
 }, {
 	"name": "Ethereum",
-    "symbol": "ETH"
-}, {	
+    "symbol": "ETH",
+    "qtd_upvote": 0,
+	"qtd_downvote": 0
+}, {
 	"name": "Klever",
-    "symbol": "KLV"
-}]`)
-
-// exampleDataCryptoVote é um objeto json baseado em CryptoVotes message
-/*
-   CryptoCurrency crypto = 1;
-   int32 qtd_upvote = 2;
-   int32 qtd_downvote = 3;
-   string idHex = 4;
-*/
-var exampleDataCryptoVotes = []byte(`[{
-	"crypto": {
-		"name": "Bitcoin",
-    	"symbol": "BTC"
-	},
-    "qtd_upvote": 0,
-	"qtd_downvote": 0
-}, {
-	"crypto": {
-		"name": "Ethereum",
-    	"symbol": "ETH"
-	},
-    "qtd_upvote": 0,
-	"qtd_downvote": 0
-}, {
-	"crypto": {
-		"name": "Klever",
-		"symbol": "KLV"
-	},
+	"symbol": "KLV",
     "qtd_upvote": 0,
 	"qtd_downvote": 0	
 }]`)

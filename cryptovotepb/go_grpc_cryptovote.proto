@@ -13,44 +13,30 @@ message EmptyReq {
 }
 
 // CryptoVote é usada para invocar metodos/func que usa dados CryptoVote como parametro (in/ou)
-// Além dos tipos básico (int32 e string) possui uma message do tipo CryptoCurrency, acessível pelo campo crypto
-message CryptoVote {    
-  CryptoCurrency crypto = 1;
-  int32 qtd_upvote = 2;
-  int32 qtd_downvote = 3;
-  string idHex = 4;
-}
-
-// CryptoCurrency é usada para invocar metodos/func que usa dados CryptoVote como parametro (in/ou)
-message CryptoCurrency {
+// Além dos tipos básico (int32 e string) possui uma message do tipo CryptoVote, acessível pelo campo crypto
+message CryptoVote {  
   string name = 1;
   string symbol = 2;
+  int32 qtd_upvote = 3;
+  int32 qtd_downvote = 4;
 }
 
-message FilterCryptoCurrency {
-  CryptoCurrency crypto = 1;  
+message FilterCryptoVote {
+  CryptoVote crypto = 1;  
 }
 
 service CryptoVoteService {
-  
-  // Recupeara uma steam de CryptoCurrency usanndo um Server-Side Streaming RPC
-  rpc ListAllCryptoCurrencies(EmptyReq) returns (stream CryptoCurrency) {}
+  // Atualiza dados de uma CryptoVote usando um simple RPC.
+  rpc CreateCryptoVote(CryptoVote) returns (CryptoVote) {}
 
-  // Recupeara uma steam de CryptoVotes usanndo um Server-Side Streaming RPC
-  rpc ListAllCryptoVotes(EmptyReq) returns (stream CryptoVote) {}
+  // Recupera dados de uma CryptoVote usando Server-Side Streaming RPC.
+  rpc RetrieveAllCryptoVoteByFilter(FilterCryptoVote) returns (stream CryptoVote) {}
 
+  // Atualiza dados de uma CryptoVote usando um simple RPC.
+  rpc UpdateAllCryptoVoteByFilter(FilterCryptoVote) returns (CryptoVote) {}
 
-  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-  rpc CreateCryptoCurrency(CryptoCurrency) returns (CryptoCurrency) {}
-
-  // Recupera dados de uma CryptoCurrency usanndo um simple RPC.
-  rpc RetrieveAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
-
-  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-  rpc UpdateAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
-
-  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-  rpc DeleteAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
+  // Atualiza dados de uma CryptoVote usando um simple RPC.
+  rpc DeleteAllCryptoVoteByFilter(FilterCryptoVote) returns (CryptoVote) {}
 }
 
 

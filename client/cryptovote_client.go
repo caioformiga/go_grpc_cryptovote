@@ -28,8 +28,16 @@ func printAllCrypto(client pb.CryptoVoteServiceClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	log.Printf("Faz uma chamada a função rpc ListAllCryptoCurrencies detalhes em go_grpc_cryptovote_grpc.pb.go ")
-	stream, err := client.ListAllCryptoCurrencies(ctx, &pb.EmptyReq{})
+	log.Printf("Faz uma chamada a função rpc RetrieveAllCryptoVoteByFilter detalhes em go_grpc_cryptovote_grpc.pb.go ")
+	filter := &pb.FilterCryptoVote{
+		Crypto: &pb.CryptoVote{
+			Name:        "",
+			Symbol:      "",
+			QtdUpvote:   0,
+			QtdDownvote: 0,
+		},
+	}
+	stream, err := client.RetrieveAllCryptoVoteByFilter(ctx, filter)
 	log.Printf("Finanlizou!")
 
 	log.Printf("Recuperando todoas as Crypto's...")

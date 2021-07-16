@@ -18,18 +18,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CryptoVoteServiceClient interface {
-	// Recupeara uma steam de CryptoCurrency usanndo um Server-Side Streaming RPC
-	ListAllCryptoCurrencies(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoCurrenciesClient, error)
-	// Recupeara uma steam de CryptoVotes usanndo um Server-Side Streaming RPC
-	ListAllCryptoVotes(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoVotesClient, error)
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	CreateCryptoCurrency(ctx context.Context, in *CryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error)
-	// Recupera dados de uma CryptoCurrency usanndo um simple RPC.
-	ReadCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error)
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	UpdateCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error)
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	DeleteCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error)
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	CreateCryptoVote(ctx context.Context, in *CryptoVote, opts ...grpc.CallOption) (*CryptoVote, error)
+	// Recupera dados de uma CryptoVote usando Server-Side Streaming RPC.
+	RetrieveAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (CryptoVoteService_RetrieveAllCryptoVoteByFilterClient, error)
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	UpdateAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (*CryptoVote, error)
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	DeleteAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (*CryptoVote, error)
 }
 
 type cryptoVoteServiceClient struct {
@@ -40,12 +36,21 @@ func NewCryptoVoteServiceClient(cc grpc.ClientConnInterface) CryptoVoteServiceCl
 	return &cryptoVoteServiceClient{cc}
 }
 
-func (c *cryptoVoteServiceClient) ListAllCryptoCurrencies(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoCurrenciesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &CryptoVoteService_ServiceDesc.Streams[0], "/cryptovotepb.CryptoVoteService/ListAllCryptoCurrencies", opts...)
+func (c *cryptoVoteServiceClient) CreateCryptoVote(ctx context.Context, in *CryptoVote, opts ...grpc.CallOption) (*CryptoVote, error) {
+	out := new(CryptoVote)
+	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/CreateCryptoVote", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &cryptoVoteServiceListAllCryptoCurrenciesClient{stream}
+	return out, nil
+}
+
+func (c *cryptoVoteServiceClient) RetrieveAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (CryptoVoteService_RetrieveAllCryptoVoteByFilterClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CryptoVoteService_ServiceDesc.Streams[0], "/cryptovotepb.CryptoVoteService/RetrieveAllCryptoVoteByFilter", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &cryptoVoteServiceRetrieveAllCryptoVoteByFilterClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -55,48 +60,16 @@ func (c *cryptoVoteServiceClient) ListAllCryptoCurrencies(ctx context.Context, i
 	return x, nil
 }
 
-type CryptoVoteService_ListAllCryptoCurrenciesClient interface {
-	Recv() (*CryptoCurrency, error)
-	grpc.ClientStream
-}
-
-type cryptoVoteServiceListAllCryptoCurrenciesClient struct {
-	grpc.ClientStream
-}
-
-func (x *cryptoVoteServiceListAllCryptoCurrenciesClient) Recv() (*CryptoCurrency, error) {
-	m := new(CryptoCurrency)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *cryptoVoteServiceClient) ListAllCryptoVotes(ctx context.Context, in *EmptyReq, opts ...grpc.CallOption) (CryptoVoteService_ListAllCryptoVotesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &CryptoVoteService_ServiceDesc.Streams[1], "/cryptovotepb.CryptoVoteService/ListAllCryptoVotes", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &cryptoVoteServiceListAllCryptoVotesClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type CryptoVoteService_ListAllCryptoVotesClient interface {
+type CryptoVoteService_RetrieveAllCryptoVoteByFilterClient interface {
 	Recv() (*CryptoVote, error)
 	grpc.ClientStream
 }
 
-type cryptoVoteServiceListAllCryptoVotesClient struct {
+type cryptoVoteServiceRetrieveAllCryptoVoteByFilterClient struct {
 	grpc.ClientStream
 }
 
-func (x *cryptoVoteServiceListAllCryptoVotesClient) Recv() (*CryptoVote, error) {
+func (x *cryptoVoteServiceRetrieveAllCryptoVoteByFilterClient) Recv() (*CryptoVote, error) {
 	m := new(CryptoVote)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -104,36 +77,18 @@ func (x *cryptoVoteServiceListAllCryptoVotesClient) Recv() (*CryptoVote, error) 
 	return m, nil
 }
 
-func (c *cryptoVoteServiceClient) CreateCryptoCurrency(ctx context.Context, in *CryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error) {
-	out := new(CryptoCurrency)
-	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/CreateCryptoCurrency", in, out, opts...)
+func (c *cryptoVoteServiceClient) UpdateAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (*CryptoVote, error) {
+	out := new(CryptoVote)
+	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/UpdateAllCryptoVoteByFilter", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *cryptoVoteServiceClient) ReadCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error) {
-	out := new(CryptoCurrency)
-	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/ReadCryptoCurrency", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *cryptoVoteServiceClient) UpdateCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error) {
-	out := new(CryptoCurrency)
-	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/UpdateCryptoCurrency", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *cryptoVoteServiceClient) DeleteCryptoCurrency(ctx context.Context, in *FilterCryptoCurrency, opts ...grpc.CallOption) (*CryptoCurrency, error) {
-	out := new(CryptoCurrency)
-	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/DeleteCryptoCurrency", in, out, opts...)
+func (c *cryptoVoteServiceClient) DeleteAllCryptoVoteByFilter(ctx context.Context, in *FilterCryptoVote, opts ...grpc.CallOption) (*CryptoVote, error) {
+	out := new(CryptoVote)
+	err := c.cc.Invoke(ctx, "/cryptovotepb.CryptoVoteService/DeleteAllCryptoVoteByFilter", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,18 +99,14 @@ func (c *cryptoVoteServiceClient) DeleteCryptoCurrency(ctx context.Context, in *
 // All implementations must embed UnimplementedCryptoVoteServiceServer
 // for forward compatibility
 type CryptoVoteServiceServer interface {
-	// Recupeara uma steam de CryptoCurrency usanndo um Server-Side Streaming RPC
-	ListAllCryptoCurrencies(*EmptyReq, CryptoVoteService_ListAllCryptoCurrenciesServer) error
-	// Recupeara uma steam de CryptoVotes usanndo um Server-Side Streaming RPC
-	ListAllCryptoVotes(*EmptyReq, CryptoVoteService_ListAllCryptoVotesServer) error
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	CreateCryptoCurrency(context.Context, *CryptoCurrency) (*CryptoCurrency, error)
-	// Recupera dados de uma CryptoCurrency usanndo um simple RPC.
-	ReadCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error)
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	UpdateCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error)
-	// Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
-	DeleteCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error)
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	CreateCryptoVote(context.Context, *CryptoVote) (*CryptoVote, error)
+	// Recupera dados de uma CryptoVote usando Server-Side Streaming RPC.
+	RetrieveAllCryptoVoteByFilter(*FilterCryptoVote, CryptoVoteService_RetrieveAllCryptoVoteByFilterServer) error
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	UpdateAllCryptoVoteByFilter(context.Context, *FilterCryptoVote) (*CryptoVote, error)
+	// Atualiza dados de uma CryptoVote usando um simple RPC.
+	DeleteAllCryptoVoteByFilter(context.Context, *FilterCryptoVote) (*CryptoVote, error)
 	mustEmbedUnimplementedCryptoVoteServiceServer()
 }
 
@@ -163,23 +114,17 @@ type CryptoVoteServiceServer interface {
 type UnimplementedCryptoVoteServiceServer struct {
 }
 
-func (UnimplementedCryptoVoteServiceServer) ListAllCryptoCurrencies(*EmptyReq, CryptoVoteService_ListAllCryptoCurrenciesServer) error {
-	return status.Errorf(codes.Unimplemented, "method ListAllCryptoCurrencies not implemented")
+func (UnimplementedCryptoVoteServiceServer) CreateCryptoVote(context.Context, *CryptoVote) (*CryptoVote, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateCryptoVote not implemented")
 }
-func (UnimplementedCryptoVoteServiceServer) ListAllCryptoVotes(*EmptyReq, CryptoVoteService_ListAllCryptoVotesServer) error {
-	return status.Errorf(codes.Unimplemented, "method ListAllCryptoVotes not implemented")
+func (UnimplementedCryptoVoteServiceServer) RetrieveAllCryptoVoteByFilter(*FilterCryptoVote, CryptoVoteService_RetrieveAllCryptoVoteByFilterServer) error {
+	return status.Errorf(codes.Unimplemented, "method RetrieveAllCryptoVoteByFilter not implemented")
 }
-func (UnimplementedCryptoVoteServiceServer) CreateCryptoCurrency(context.Context, *CryptoCurrency) (*CryptoCurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateCryptoCurrency not implemented")
+func (UnimplementedCryptoVoteServiceServer) UpdateAllCryptoVoteByFilter(context.Context, *FilterCryptoVote) (*CryptoVote, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAllCryptoVoteByFilter not implemented")
 }
-func (UnimplementedCryptoVoteServiceServer) ReadCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadCryptoCurrency not implemented")
-}
-func (UnimplementedCryptoVoteServiceServer) UpdateCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateCryptoCurrency not implemented")
-}
-func (UnimplementedCryptoVoteServiceServer) DeleteCryptoCurrency(context.Context, *FilterCryptoCurrency) (*CryptoCurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteCryptoCurrency not implemented")
+func (UnimplementedCryptoVoteServiceServer) DeleteAllCryptoVoteByFilter(context.Context, *FilterCryptoVote) (*CryptoVote, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllCryptoVoteByFilter not implemented")
 }
 func (UnimplementedCryptoVoteServiceServer) mustEmbedUnimplementedCryptoVoteServiceServer() {}
 
@@ -194,116 +139,77 @@ func RegisterCryptoVoteServiceServer(s grpc.ServiceRegistrar, srv CryptoVoteServ
 	s.RegisterService(&CryptoVoteService_ServiceDesc, srv)
 }
 
-func _CryptoVoteService_ListAllCryptoCurrencies_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(EmptyReq)
+func _CryptoVoteService_CreateCryptoVote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CryptoVote)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CryptoVoteServiceServer).CreateCryptoVote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cryptovotepb.CryptoVoteService/CreateCryptoVote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CryptoVoteServiceServer).CreateCryptoVote(ctx, req.(*CryptoVote))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CryptoVoteService_RetrieveAllCryptoVoteByFilter_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(FilterCryptoVote)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(CryptoVoteServiceServer).ListAllCryptoCurrencies(m, &cryptoVoteServiceListAllCryptoCurrenciesServer{stream})
+	return srv.(CryptoVoteServiceServer).RetrieveAllCryptoVoteByFilter(m, &cryptoVoteServiceRetrieveAllCryptoVoteByFilterServer{stream})
 }
 
-type CryptoVoteService_ListAllCryptoCurrenciesServer interface {
-	Send(*CryptoCurrency) error
-	grpc.ServerStream
-}
-
-type cryptoVoteServiceListAllCryptoCurrenciesServer struct {
-	grpc.ServerStream
-}
-
-func (x *cryptoVoteServiceListAllCryptoCurrenciesServer) Send(m *CryptoCurrency) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _CryptoVoteService_ListAllCryptoVotes_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(EmptyReq)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(CryptoVoteServiceServer).ListAllCryptoVotes(m, &cryptoVoteServiceListAllCryptoVotesServer{stream})
-}
-
-type CryptoVoteService_ListAllCryptoVotesServer interface {
+type CryptoVoteService_RetrieveAllCryptoVoteByFilterServer interface {
 	Send(*CryptoVote) error
 	grpc.ServerStream
 }
 
-type cryptoVoteServiceListAllCryptoVotesServer struct {
+type cryptoVoteServiceRetrieveAllCryptoVoteByFilterServer struct {
 	grpc.ServerStream
 }
 
-func (x *cryptoVoteServiceListAllCryptoVotesServer) Send(m *CryptoVote) error {
+func (x *cryptoVoteServiceRetrieveAllCryptoVoteByFilterServer) Send(m *CryptoVote) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _CryptoVoteService_CreateCryptoCurrency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CryptoCurrency)
+func _CryptoVoteService_UpdateAllCryptoVoteByFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FilterCryptoVote)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CryptoVoteServiceServer).CreateCryptoCurrency(ctx, in)
+		return srv.(CryptoVoteServiceServer).UpdateAllCryptoVoteByFilter(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cryptovotepb.CryptoVoteService/CreateCryptoCurrency",
+		FullMethod: "/cryptovotepb.CryptoVoteService/UpdateAllCryptoVoteByFilter",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CryptoVoteServiceServer).CreateCryptoCurrency(ctx, req.(*CryptoCurrency))
+		return srv.(CryptoVoteServiceServer).UpdateAllCryptoVoteByFilter(ctx, req.(*FilterCryptoVote))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CryptoVoteService_ReadCryptoCurrency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FilterCryptoCurrency)
+func _CryptoVoteService_DeleteAllCryptoVoteByFilter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FilterCryptoVote)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CryptoVoteServiceServer).ReadCryptoCurrency(ctx, in)
+		return srv.(CryptoVoteServiceServer).DeleteAllCryptoVoteByFilter(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cryptovotepb.CryptoVoteService/ReadCryptoCurrency",
+		FullMethod: "/cryptovotepb.CryptoVoteService/DeleteAllCryptoVoteByFilter",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CryptoVoteServiceServer).ReadCryptoCurrency(ctx, req.(*FilterCryptoCurrency))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CryptoVoteService_UpdateCryptoCurrency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FilterCryptoCurrency)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CryptoVoteServiceServer).UpdateCryptoCurrency(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/cryptovotepb.CryptoVoteService/UpdateCryptoCurrency",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CryptoVoteServiceServer).UpdateCryptoCurrency(ctx, req.(*FilterCryptoCurrency))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CryptoVoteService_DeleteCryptoCurrency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FilterCryptoCurrency)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CryptoVoteServiceServer).DeleteCryptoCurrency(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/cryptovotepb.CryptoVoteService/DeleteCryptoCurrency",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CryptoVoteServiceServer).DeleteCryptoCurrency(ctx, req.(*FilterCryptoCurrency))
+		return srv.(CryptoVoteServiceServer).DeleteAllCryptoVoteByFilter(ctx, req.(*FilterCryptoVote))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -316,31 +222,22 @@ var CryptoVoteService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*CryptoVoteServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateCryptoCurrency",
-			Handler:    _CryptoVoteService_CreateCryptoCurrency_Handler,
+			MethodName: "CreateCryptoVote",
+			Handler:    _CryptoVoteService_CreateCryptoVote_Handler,
 		},
 		{
-			MethodName: "ReadCryptoCurrency",
-			Handler:    _CryptoVoteService_ReadCryptoCurrency_Handler,
+			MethodName: "UpdateAllCryptoVoteByFilter",
+			Handler:    _CryptoVoteService_UpdateAllCryptoVoteByFilter_Handler,
 		},
 		{
-			MethodName: "UpdateCryptoCurrency",
-			Handler:    _CryptoVoteService_UpdateCryptoCurrency_Handler,
-		},
-		{
-			MethodName: "DeleteCryptoCurrency",
-			Handler:    _CryptoVoteService_DeleteCryptoCurrency_Handler,
+			MethodName: "DeleteAllCryptoVoteByFilter",
+			Handler:    _CryptoVoteService_DeleteAllCryptoVoteByFilter_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ListAllCryptoCurrencies",
-			Handler:       _CryptoVoteService_ListAllCryptoCurrencies_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "ListAllCryptoVotes",
-			Handler:       _CryptoVoteService_ListAllCryptoVotes_Handler,
+			StreamName:    "RetrieveAllCryptoVoteByFilter",
+			Handler:       _CryptoVoteService_RetrieveAllCryptoVoteByFilter_Handler,
 			ServerStreams: true,
 		},
 	},
