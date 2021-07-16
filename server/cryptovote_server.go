@@ -6,6 +6,7 @@ package main
 // source: https://github.com/grpc/grpc-go/blob/master/examples/route_guide/server/server.go
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -19,11 +20,13 @@ import (
 	"google.golang.org/grpc/examples/data"
 	"google.golang.org/grpc/reflection"
 
+	bo "github.com/caioformiga/go_mongodb_crud_cryptovote/bo"
+
 	pb "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb"
 )
 
 /*
-TODO usar env pois quaando for rodar em kubernetes fafilita a customização pelo config (yaml)
+TODO usar env pois quando for rodar em kubernetes fafilita a customização pelo config (yaml)
 */
 var (
 	tls      = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
@@ -66,6 +69,30 @@ func (s *cryptoVoteServiceServer) ListAllCryptoVotes(empty *pb.EmptyReq, stream 
 	return nil
 }
 
+func (s *cryptoVoteServiceServer) CreateCryptoCurrency(ctx context.Context, newCryptoCurrency *pb.CryptoCurrency) (*pb.CryptoCurrency, error) {
+	mongoCryptoCurrency, err := bo.CreateCryptoCurrency(newCryptoCurrency.Name, newCryptoCurrency.Symbol)
+	if err != nil {
+		log.Fatalf("Problemas para salvar dados: %v", err)
+	}
+	log.Printf("mongoCryptoCurrency: %v", mongoCryptoCurrency)
+	return newCryptoCurrency, err
+}
+
+func (s *cryptoVoteServiceServer) RetrieveAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
+	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	return filter.Crypto, nil
+}
+
+func (s *cryptoVoteServiceServer) UpdateAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
+	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	return filter.Crypto, nil
+}
+
+func (s *cryptoVoteServiceServer) DeleteAllCryptoCurrencyByFilter(ctx context.Context, filter *pb.FilterCryptoCurrency) (*pb.CryptoCurrency, error) {
+	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	return filter.Crypto, nil
+}
+
 // loadCryptoCurrencisFromMongoDB carrega CryptoCurrencis
 func (s *cryptoVoteServiceServer) loadCryptoCurrencis() {
 	var data []byte = exampleDataCryptoCurrencies
@@ -82,17 +109,28 @@ func (s *cryptoVoteServiceServer) loadCryptoVotes() {
 	}
 }
 
+// imprime no console todos os campos do
+func printCryptoVotesToString(cryptoVote *pb.CryptoVote) {
+	log.Printf("Crypto Name: %v", cryptoVote.Crypto.Name)
+	log.Printf("Crypto Symbol: %v", cryptoVote.Crypto.Symbol)
+	log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
+	log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
+}
+
 // imprime no console do servidor
 func (s *cryptoVoteServiceServer) printAllCryptoVotes() {
 	log.Printf("Available Crypto's:")
 	for i, cryptoVote := range s.savedCryptoVotes {
 		log.Printf("Crypto index: %d", i)
-		log.Printf("Crypto Name: %v", cryptoVote.Crypto.Name)
-		log.Printf("Crypto Symbol: %v", cryptoVote.Crypto.Symbol)
-		log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
-		log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
+		printCryptoVotesToString(cryptoVote)
 		log.Printf("\n")
 	}
+}
+
+// imprime no console todos os campos do
+func printCryptoCurrencisToString(cryptoCurrency *pb.CryptoCurrency) {
+	log.Printf("Crypto Name: %v", cryptoCurrency.Name)
+	log.Printf("Crypto Symbol: %v", cryptoCurrency.Symbol)
 }
 
 // imprime no console do servidor
@@ -100,8 +138,7 @@ func (s *cryptoVoteServiceServer) printAllCryptoCurrencis() {
 	log.Printf("Available Crypto's:")
 	for i, cryptoCurrency := range s.savedCryptoCurrencis {
 		log.Printf("Crypto index: %d", i)
-		log.Printf("Crypto Name: %v", cryptoCurrency.Name)
-		log.Printf("Crypto Symbol: %v", cryptoCurrency.Symbol)
+		printCryptoCurrencisToString(cryptoCurrency)
 		log.Printf("\n")
 	}
 }

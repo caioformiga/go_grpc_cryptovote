@@ -4,41 +4,65 @@ option go_package = "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb";
 
 package cryptovotepb;
 
-// The EmptyReq message containing the CryptoVote data.
+/*
+  O gRPC usa o PROTOCOL BUFFER para trafegar dados entre cliente e servidor
+  Cada message definida aqui será convertida em struct pelo protoc
+*/
+// EmptyReq é usada para invocar metodos/func rpc sem parametros (in/out)
 message EmptyReq {  
 }
 
-// The CryptoVote message containing the CryptoVote data.
+// CryptoVote é usada para invocar metodos/func que usa dados CryptoVote como parametro (in/ou)
+// Além dos tipos básico (int32 e string) possui uma message do tipo CryptoCurrency, acessível pelo campo crypto
 message CryptoVote {    
-    CryptoCurrency crypto = 1;
-    int32 qtd_upvote = 2;
-    int32 qtd_downvote = 3;
-    string idHex = 4;
+  CryptoCurrency crypto = 1;
+  int32 qtd_upvote = 2;
+  int32 qtd_downvote = 3;
+  string idHex = 4;
 }
 
-// The CryptoCurrency message containing as CryptoCurrency
+// CryptoCurrency é usada para invocar metodos/func que usa dados CryptoVote como parametro (in/ou)
 message CryptoCurrency {
-    string name = 1;
-    string symbol = 2;
+  string name = 1;
+  string symbol = 2;
+}
+
+message FilterCryptoCurrency {
+  CryptoCurrency crypto = 1;  
 }
 
 service CryptoVoteService {
   
-  // Obtains all CryptoCurrency using a Server-Side Streaming RPC
+  // Recupeara uma steam de CryptoCurrency usanndo um Server-Side Streaming RPC
   rpc ListAllCryptoCurrencies(EmptyReq) returns (stream CryptoCurrency) {}
 
-  // Obtains all CryptoVotes using a Server-Side Streaming RPC
+  // Recupeara uma steam de CryptoVotes usanndo um Server-Side Streaming RPC
   rpc ListAllCryptoVotes(EmptyReq) returns (stream CryptoVote) {}
+
+
+  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
+  rpc CreateCryptoCurrency(CryptoCurrency) returns (CryptoCurrency) {}
+
+  // Recupera dados de uma CryptoCurrency usanndo um simple RPC.
+  rpc RetrieveAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
+
+  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
+  rpc UpdateAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
+
+  // Atualiza dados de uma CryptoCurrency usanndo um simple RPC.
+  rpc DeleteAllCryptoCurrencyByFilter(FilterCryptoCurrency) returns (CryptoCurrency) {}
 }
 
 
 /*
-  Simple RPC
-  Unary RPCs where the client sends a single request to the server and 
+  Diferença entre Simple RPC e Server-Side Streaming RPC
+  
+
+  Simple RPC: the client sends a single request to the server and 
   gets a single response back, just like a normal function call.
 
-  Server-Side Streaming RPC
-  Server streaming RPCs where the client sends a request to the server and 
+  
+  Server-Side streaming RPC: the client sends a request to the server and 
   gets a stream to read a sequence of messages back. The client reads from 
   the returned stream until there are no more messages. gRPC guarantees 
   message ordering within an individual RPC call.
