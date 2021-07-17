@@ -16,9 +16,12 @@ import (
 
 	"google.golang.org/grpc"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/examples/data"
 	"google.golang.org/grpc/reflection"
+
+	"google.golang.org/grpc/status"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -56,45 +59,120 @@ type cryptoVoteServiceServer struct {
 	dados e carrega os dado na memoria
 */
 func (s *cryptoVoteServiceServer) RetrieveAllCryptoVoteByFilter(filter *pb.FilterCryptoVote, stream pb.CryptoVoteService_RetrieveAllCryptoVoteByFilterServer) error {
-	if len(s.cachedCryptoVotes) <= 0 {
-		s.loadCryptoVotes()
+	// criar um filtro bson.M com base no model.CryptoVote para recuperar os dados com base neste filtro
+	var modelFilter bson.M
+	messageCryptoVote := filter.Crypto
+	if messageCryptoVote != nil {
+		modelFilter = bson.M{
+			"name":          messageCryptoVote.Name,
+			"symbol":        messageCryptoVote.Symbol,
+			"qtd_upvotes":   messageCryptoVote.QtdUpvote,
+			"qtd_downvotes": messageCryptoVote.QtdDownvote,
+		}
 	}
 
-	for _, cryptoVotes := range s.cachedCryptoVotes {
-		if err := stream.Send(cryptoVotes); err != nil {
-			return err
+	modelDataCryptoVotes, err := bo.RetrieveAllCryptoVoteByFilter(modelFilter)
+	if err != nil {
+		log.Printf("Problemas para recuperar dados: %v", err)
+		error_message := err.Error()
+		grpc_error_code := status.Code(err)
+		return status.Errorf(grpc_error_code, error_message)
+	}
+
+	// convertendo de []model.CryptoVote para json
+	jsonData, err := json.Marshal(modelDataCryptoVotes)
+	if err != nil {
+		log.Printf("Problemas para recuperar dados: %v", err)
+		error_message := err.Error()
+		grpc_error_code := status.Code(err)
+		return status.Errorf(grpc_error_code, error_message)
+	} else {
+		// convertendo de json para []pb.CryptoVote
+		err = json.Unmarshal(jsonData, &s.cachedCryptoVotes)
+		if err != nil {
+			log.Printf("Erro ao fazer Unmarshal de json para CryptoVotes: %v", err)
+			error_message := err.Error()
+			grpc_error_code := status.Code(err)
+			return status.Errorf(grpc_error_code, error_message)
+		}
+	}
+
+	if len(s.cachedCryptoVotes) > 0 {
+		for _, cryptoVotes := range s.cachedCryptoVotes {
+			if err := stream.Send(cryptoVotes); err != nil {
+				error_message := err.Error()
+				grpc_error_code := status.Code(err)
+				return status.Errorf(grpc_error_code, error_message)
+			}
 		}
 	}
 	return nil
 }
 
 func (s *cryptoVoteServiceServer) CreateCryptoVote(ctx context.Context, messageCryptoVote *pb.CryptoVote) (*pb.CryptoVote, error) {
+	var modelCryptoVote model.CryptoVote
 
-	modelCryptoVote, err := TranslateToModelCryptoVote(messageCryptoVote)
+	// convertendo de pb.CryptoVote para json
+	jsonData, err := json.Marshal(messageCryptoVote)
 	if err != nil {
-		log.Fatalf("Problemas para traduzir dados: %v", err)
+		log.Printf("Problemas para fazer Marshal de pb.CryptoVote para json: %v", err)
+		error_message := err.Error()
+		grpc_error_code := status.Code(err)
+		return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
+	} else {
+		// convertendo de json para model.CryptoVote
+		err := json.Unmarshal(jsonData, &modelCryptoVote)
+		if err != nil {
+			log.Printf("Erro ao fazer Unmarshal de json para model.CryptoVote: %v", err)
+			error_message := err.Error()
+			grpc_error_code := status.Code(err)
+			return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
+		}
 	}
 
-	modelCryptoVote, err = bo.CreateCryptoVote(modelCryptoVote.Name, modelCryptoVote.Symbol, modelCryptoVote.Qtd_Upvote, modelCryptoVote.Qtd_Downvote)
+	modelCryptoVote, err = bo.ValidateCryptoVoteData(modelCryptoVote.Name, modelCryptoVote.Symbol, modelCryptoVote.Qtd_Upvote, modelCryptoVote.Qtd_Downvote)
 	if err != nil {
-		log.Fatalf("Problemas para salvar dados: %v", err)
+		log.Printf("Problemas para validar dados: %v", err)
+		error_message := err.Error()
+		grpc_error_code := codes.InvalidArgument
+		return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
 	}
-	log.Printf("modelCryptoVote: %v", modelCryptoVote)
 
-	messageCryptoVote, err = TranslateToMessageCryptoVote(modelCryptoVote)
+	modelCryptoVote, err = bo.CreateCryptoVote(modelCryptoVote)
 	if err != nil {
-		log.Fatalf("Problemas para traduzir dados: %v", err)
+		log.Printf("Problemas para salvar dados: %v", err)
+		error_message := err.Error()
+		grpc_error_code := status.Code(err)
+		return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
+	}
+
+	// convertendo de model.CryptoVote para json
+	jsonData, err = json.Marshal(modelCryptoVote)
+	if err != nil {
+		log.Printf("Problemas para fazer Marshal de model.CryptoVote para json: %v", err)
+		error_message := err.Error()
+		grpc_error_code := status.Code(err)
+		return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
+	} else {
+		// convertendo de json para []pb.CryptoVote
+		err := json.Unmarshal(jsonData, &messageCryptoVote)
+		if err != nil {
+			log.Printf("Erro ao fazer Unmarshal de json para []pb.CryptoVote: %v", err)
+			error_message := err.Error()
+			grpc_error_code := status.Code(err)
+			return messageCryptoVote, status.Errorf(grpc_error_code, error_message)
+		}
 	}
 	return messageCryptoVote, err
 }
 
 func (s *cryptoVoteServiceServer) UpdateAllCryptoVoteByFilter(ctx context.Context, filter *pb.FilterCryptoVote) (*pb.CryptoVote, error) {
-	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	log.Printf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
 	return filter.Crypto, nil
 }
 
 func (s *cryptoVoteServiceServer) DeleteAllCryptoVoteByFilter(ctx context.Context, filter *pb.FilterCryptoVote) (*pb.CryptoVote, error) {
-	log.Fatalf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
+	log.Printf("Função não implementada ainda...retornando o próprio filtro: %v", filter.Crypto)
 	return filter.Crypto, nil
 }
 
@@ -102,70 +180,50 @@ func (s *cryptoVoteServiceServer) DeleteAllCryptoVoteByFilter(ctx context.Contex
 func (s *cryptoVoteServiceServer) loadCryptoVotes() {
 	var modelDataCryptoVotes []model.CryptoVote
 
-	// filtro vazio para recuperar todos os dados do bancp
+	// filtro vazio para recuperar todos os dados do banco
 	filter := bson.M{}
 	modelDataCryptoVotes, err := bo.RetrieveAllCryptoVoteByFilter(filter)
 	if err != nil {
-		log.Fatalf("Problemas para recuperar dados: %v", err)
+		log.Printf("Problemas para recuperar dados: %v", err)
 	}
 	if len(modelDataCryptoVotes) > 0 {
-		log.Print("Crypto do banco de dados...")
 
-		// convertendo de model.CryptoVote para json
+		// convertendo de []model.CryptoVote para json
 		jsonData, err := json.Marshal(modelDataCryptoVotes)
 		if err != nil {
-			log.Fatalf("Problemas para fazer Marshal: %v", err)
-		} else {
-			// convertendo de json para []pb.CryptoVote
-			err := json.Unmarshal(jsonData, &s.cachedCryptoVotes)
-			if err != nil {
-				log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em cachedCryptoVotes: %v", err)
-			}
+			log.Printf("Problemas para recuperar dados: %v", err)
 		}
-	} else {
-		log.Print("Crypto do arquivo jsonDefalutDataCryptoVotes...")
 
-		if len(jsonDefalutDataCryptoVotes) > 0 {
-			// convertendo de json para []model.CryptoVote
-			err := json.Unmarshal(jsonDefalutDataCryptoVotes, &modelDataCryptoVotes)
-			if err != nil {
-				log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em modelDataCryptoVotes: %v", err)
-			} else {
-				// depois do Unmarshal se tiver CryptoVote
-				// para cada CryptoVote faz um create
-				if len(modelDataCryptoVotes) > 0 {
-					for _, modelCryptoVote := range modelDataCryptoVotes {
+		// convertendo de json para []pb.CryptoVote
+		err = json.Unmarshal(jsonData, &s.cachedCryptoVotes)
+		if err != nil {
+			log.Printf("Erro ao fazer Unmarshal de json para []pb.CryptoVote: %v", err)
+		}
 
-						name := modelCryptoVote.Name
-						symbol := modelCryptoVote.Symbol
-						qtd_upvote := modelCryptoVote.Qtd_Upvote
-						qtd_downvote := modelCryptoVote.Qtd_Downvote
+	} else if len(jsonDefalutDataCryptoVotes) > 0 {
+		// convertendo de json para []model.CryptoVote
+		err := json.Unmarshal(jsonDefalutDataCryptoVotes, &modelDataCryptoVotes)
+		if err != nil {
+			log.Printf("Erro ao fazer Unmarshal de json para []model.CryptoVote: %v", err)
+		}
 
-						modelCryptoVote, err = bo.CreateCryptoVote(name, symbol, qtd_upvote, qtd_downvote)
-						if err != nil {
-							log.Fatalf("Problemas para salvar dados: %v", err)
-						}
-					}
+		// depois do Unmarshal se tiver CryptoVote faz um create
+		if len(modelDataCryptoVotes) > 0 {
+			for _, modelCryptoVote := range modelDataCryptoVotes {
+
+				validatedCryptoVote, err := bo.ValidateCryptoVoteData(modelCryptoVote.Name, modelCryptoVote.Symbol, modelCryptoVote.Qtd_Upvote, modelCryptoVote.Qtd_Downvote)
+				if err != nil {
+					log.Printf("Problemas para validar dados: %v", err)
+				}
+
+				modelCryptoVote, err = bo.CreateCryptoVote(validatedCryptoVote)
+				if err != nil {
+					log.Printf("Problemas para salvar dados: %v", err)
 				}
 			}
 		}
-		// convertendo de json para []pb.CryptoVote
-		if err := json.Unmarshal(jsonDefalutDataCryptoVotes, &s.cachedCryptoVotes); err != nil {
-			log.Fatalf("Erro ao fazer Unmarshal de CryptoVotes em cachedCryptoVotes: %v", err)
-		}
-	}
-}
-
-// imprime no console do servidor
-func (s *cryptoVoteServiceServer) printAllCryptoVotes() {
-	log.Printf("Available Crypto's:")
-	for i, cryptoVote := range s.cachedCryptoVotes {
-		log.Printf("Crypto index: %d", i)
-		log.Printf("Crypto Name: %v", cryptoVote.Name)
-		log.Printf("Crypto Symbol: %v", cryptoVote.Symbol)
-		log.Printf("Crypto QTD Up: %v", cryptoVote.QtdUpvote)
-		log.Printf("Crypto QTD Dow: %v", cryptoVote.QtdDownvote)
-		log.Printf("\n")
+		//chama recursivamente para entrar no primeiro laço
+		s.loadCryptoVotes()
 	}
 }
 
@@ -178,7 +236,7 @@ func newServer() *cryptoVoteServiceServer {
 	s := &cryptoVoteServiceServer{}
 	s.printServerInfo()
 	s.loadCryptoVotes()
-	s.printAllCryptoVotes()
+
 	return s
 }
 
@@ -186,7 +244,7 @@ func main() {
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Printf("failed to listen: %v", err)
 	}
 	var opts []grpc.ServerOption
 	if *tls {
@@ -198,7 +256,7 @@ func main() {
 		}
 		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
 		if err != nil {
-			log.Fatalf("Failed to generate credentials %v", err)
+			log.Printf("Failed to generate credentials %v", err)
 		}
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
