@@ -58,3 +58,7 @@ result: $GOPATH/src/github.com/caioformiga/go_grpc_cryptovote/cryptovotepb/go_gr
 
 protoc --go-grpc_out=paths=source_relative:. cryptovotepb/go_grpc_cryptovote.proto
 result: $GOPATH/src/github.com/caioformiga/go_grpc_cryptovote/cryptovotepb/go_grpc_cryptovote_grpc.pb.go
+
+
+
+$ grpcui -plaintext localhost:12345

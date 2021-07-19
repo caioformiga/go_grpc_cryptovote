@@ -21,22 +21,52 @@ message CryptoVote {
   int32 qtd_downvote = 4;
 }
 
-message FilterCryptoVote {
-  CryptoVote crypto = 1;  
+message CreateCryptoReq {
+  CryptoVote crypto = 1;
 }
+
+message RetrieveCryptoReq {
+  CryptoVote filter = 1;
+}
+
+message UpdateCryptoReq {
+  CryptoVote filter = 1;
+  string newName = 2;
+  string newSymbol = 3;
+}
+
+message AddVoteReq {
+  string name = 1;
+  string symbol = 2;
+}
+
+message TotalChangesRes{
+  int32 qtd = 1;
+}
+
+message DeleteCryptoReq {
+  CryptoVote filter = 1;
+}
+
 
 service CryptoVoteService {
   // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc CreateCryptoVote(CryptoVote) returns (CryptoVote) {}
+  rpc CreateCryptoVote(CreateCryptoReq) returns (TotalChangesRes) {}
 
   // Recupera dados de uma CryptoVote usando Server-Side Streaming RPC.
-  rpc RetrieveAllCryptoVoteByFilter(FilterCryptoVote) returns (stream CryptoVote) {}
+  rpc RetrieveAllCryptoVoteByFilter(RetrieveCryptoReq) returns (stream CryptoVote) {}
 
   // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc UpdateAllCryptoVoteByFilter(FilterCryptoVote) returns (CryptoVote) {}
+  rpc UpdateOneCryptoVoteByFilter(UpdateCryptoReq) returns (TotalChangesRes) {}
+
+  // Atualiza dados de Qtd_Upvote de uma CryptoVote usando um simple RPC.
+  rpc AddUpVote(AddVoteReq) returns (TotalChangesRes) {}
+
+  // Atualiza dados de Qtd_Upvote de uma CryptoVote usando um simple RPC.
+  rpc AddDownVote(AddVoteReq) returns (TotalChangesRes) {}
 
   // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc DeleteAllCryptoVoteByFilter(FilterCryptoVote) returns (CryptoVote) {}
+  rpc DeleteAllCryptoVoteByFilter(DeleteCryptoReq) returns (TotalChangesRes) {}
 }
 
 
