@@ -47,7 +47,7 @@ type cryptoVoteServiceServer struct {
 	//retornos do tipo streams definidos no cryptoVoteServiceServer do arquivo go_grpc_cryptovote.proto
 	cachedCryptoVotes []*pb.CryptoVote
 
-	// protege cryptovotes de serem computados simultaneamente
+	// protege alterações de escrita serem realizadas simultaneamente
 	mutex sync.Mutex
 }
 
@@ -84,6 +84,7 @@ func (s *cryptoVoteServiceServer) CreateCryptoVote(ctx context.Context, req *pb.
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
 
+	s.mutex.Lock()
 	// faz as validações e salva no banco
 	// validação de valores default
 	// validação de unicos para name e symbol
@@ -93,6 +94,7 @@ func (s *cryptoVoteServiceServer) CreateCryptoVote(ctx context.Context, req *pb.
 		grpc_error_code := status.Code(err)
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
+	s.mutex.Unlock()
 
 	// registra o total de atualizações
 	if !cyptoVote.Id.IsZero() {
@@ -199,6 +201,7 @@ func (s *cryptoVoteServiceServer) UpdateOneCryptoVoteByFilter(ctx context.Contex
 		Symbol: req.NewSymbol,
 	}
 
+	s.mutex.Lock()
 	// se exister um único registro com base no filtro faz uma atualização
 	// no name e symbol de uma CryptoVote, antes faz validação e salva
 	// validação de valores default
@@ -209,6 +212,7 @@ func (s *cryptoVoteServiceServer) UpdateOneCryptoVoteByFilter(ctx context.Contex
 		grpc_error_code := status.Code(err)
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
+	s.mutex.Unlock()
 
 	if !cyptoVote.Id.IsZero() {
 		res.Qtd = 1
@@ -222,6 +226,7 @@ func (s *cryptoVoteServiceServer) AddUpVote(ctx context.Context, req *pb.AddVote
 		Qtd: 0,
 	}
 
+	s.mutex.Lock()
 	// cria um model.CryptoVote com dados da req
 	cyptoVote, err := bo.AddUpVote(req.Name, req.Symbol)
 	if err != nil {
@@ -229,6 +234,7 @@ func (s *cryptoVoteServiceServer) AddUpVote(ctx context.Context, req *pb.AddVote
 		grpc_error_code := status.Code(err)
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
+	s.mutex.Unlock()
 
 	// se o ID não for zero sinal que conseguiu realizar UpVote
 	if !cyptoVote.Id.IsZero() {
@@ -243,6 +249,7 @@ func (s *cryptoVoteServiceServer) AddDownVote(ctx context.Context, req *pb.AddVo
 		Qtd: 0,
 	}
 
+	s.mutex.Lock()
 	// cria um model.CryptoVote com dados da req
 	cyptoVote, err := bo.AddDownVote(req.Name, req.Symbol)
 	if err != nil {
@@ -250,6 +257,7 @@ func (s *cryptoVoteServiceServer) AddDownVote(ctx context.Context, req *pb.AddVo
 		grpc_error_code := status.Code(err)
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
+	s.mutex.Unlock()
 
 	// se o ID não for zero sinal que conseguiu realizar DownVote
 	if !cyptoVote.Id.IsZero() {
@@ -284,12 +292,14 @@ func (s *cryptoVoteServiceServer) DeleteAllCryptoVoteByFilter(ctx context.Contex
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
 
+	s.mutex.Lock()
 	deletedQtd, err := bo.DeleteAllCryptoVoteByFilter(filter)
 	if err != nil {
 		error_message := err.Error()
 		grpc_error_code := status.Code(err)
 		return res, status.Errorf(grpc_error_code, error_message)
 	}
+	s.mutex.Unlock()
 
 	if deletedQtd > 0 {
 		res.Qtd = int32(deletedQtd)
@@ -411,18 +421,18 @@ func main() {
 	int32 qtd_downvote = 4;
 */
 var jsonDefalutDataCryptoVotes = []byte(`[{
-	"name": "Bitcoin",
-    "symbol": "BTC",
+	"name": "bitcoin",
+    "symbol": "btc",
 	"qtd_upvote": 0,
 	"qtd_downvote": 0
 }, {
-	"name": "Ethereum",
-    "symbol": "ETH",
+	"name": "ethereum",
+    "symbol": "eth",
     "qtd_upvote": 0,
 	"qtd_downvote": 0
 }, {
-	"name": "Klever",
-	"symbol": "KLV",
+	"name": "klever",
+	"symbol": "klv",
     "qtd_upvote": 0,
 	"qtd_downvote": 0	
 }]`)
