@@ -1,0 +1,16 @@
+type: google.api.Service
+config_version: 3
+
+
+# no .proto ha uma entrada para option go_package cconforme abaixo
+# go_package = "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb";
+
+# MY_API_NAME.endpoints.MY_PROJECT_ID.cloud.goog`
+# MY_API_NAME = a definir no Google Cloud Service
+# MY_PROJECT_ID = a definir no Google Cloud Service
+name: <MY_API_NAME>.endpoints.<MY_PROJECT_ID>.cloud.goog
+
+title: CryptoVote gRPC API (Klevar's Technical Challenge)
+apis:
+  #
+- name: cryptovotepb.CryptoVoteService

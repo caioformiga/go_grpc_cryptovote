@@ -4,6 +4,8 @@ option go_package = "github.com/caioformiga/go_grpc_cryptovote/cryptovotepb";
 
 package cryptovotepb;
 
+import "google/api/annotations.proto";
+
 /*
   O gRPC usa o PROTOCOL BUFFER para trafegar dados entre cliente e servidor
   Cada message definida aqui será convertida em struct pelo protoc
@@ -21,11 +23,15 @@ message CryptoVote {
   int32 qtd_downvote = 4;
 }
 
-message CreateCryptoReq {
+message InsertCryptoReq {
   CryptoVote crypto = 1;
 }
 
-message RetrieveCryptoReq {
+message ListCryptoReq {
+  CryptoVote filter = 1;
+}
+
+message GetCryptoReq {
   CryptoVote filter = 1;
 }
 
@@ -36,8 +42,7 @@ message UpdateCryptoReq {
 }
 
 message AddVoteReq {
-  string name = 1;
-  string symbol = 2;
+  CryptoVote filter = 1;
 }
 
 message TotalChangesRes{
@@ -48,25 +53,58 @@ message DeleteCryptoReq {
   CryptoVote filter = 1;
 }
 
-
+// nome do endpoint no api_config.yaml = CryptoVoteService
 service CryptoVoteService {
-  // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc CreateCryptoVote(CreateCryptoReq) returns (TotalChangesRes) {}
+  // Insert dados de uma CryptoVote usando um simple RPC.
+  rpc InsertCryptoVote(InsertCryptoReq) returns (TotalChangesRes) {
+    option (google.api.http) = {
+      post: "/v1/cryptovotes"
+      body: "crypto"
+    };
+  }
 
-  // Recupera dados de uma CryptoVote usando Server-Side Streaming RPC.
-  rpc RetrieveAllCryptoVoteByFilter(RetrieveCryptoReq) returns (stream CryptoVote) {}
+  // Recuperar todas CryptoVote usando Server-Side Streaming RPC.
+  rpc ListAllCryptoVoteByFilter(ListCryptoReq) returns (stream CryptoVote) {   
+    option (google.api.http) = {
+      get: "/v1/cryptovotes/{filter}"
+    };    
+  }
 
   // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc UpdateOneCryptoVoteByFilter(UpdateCryptoReq) returns (TotalChangesRes) {}
+  rpc UpdateOneCryptoVoteByFilter(UpdateCryptoReq) returns (TotalChangesRes) {
+    option (google.api.http) = {
+      post: "/v1/cryptovotes"
+      body: "*"
+    };
+  }
+
+  // Deleta uma CryptoVote usando um simple RPC.
+  rpc DeleteAllCryptoVoteByFilter(DeleteCryptoReq) returns (TotalChangesRes) {
+    option (google.api.http) = {
+      delete: "/v1/cryptovotes/{filter}"      
+    };
+  }
 
   // Atualiza dados de Qtd_Upvote de uma CryptoVote usando um simple RPC.
-  rpc AddUpVote(AddVoteReq) returns (TotalChangesRes) {}
+  rpc AddUpVote(AddVoteReq) returns (TotalChangesRes) {
+    option (google.api.http) = {
+      post: "/v1:upvote"
+      body: "*"
+    };
+  }
 
   // Atualiza dados de Qtd_Upvote de uma CryptoVote usando um simple RPC.
-  rpc AddDownVote(AddVoteReq) returns (TotalChangesRes) {}
+  rpc AddDownVote(AddVoteReq) returns (TotalChangesRes) {
+    option (google.api.http) = {
+      post: "/v1:downvote"
+      body: "*"
+    };
+  }  
 
-  // Atualiza dados de uma CryptoVote usando um simple RPC.
-  rpc DeleteAllCryptoVoteByFilter(DeleteCryptoReq) returns (TotalChangesRes) {}
+  // 7. The API have a method that stream a live update of the current sum 
+  // of the votes from a given Cryptocurrency
+  // Sumariza absolute(UpVote - DownVote) 
+  // rpc SumaryVote(RetrieveCryptoReq) returns (stream CryptoVote) {}
 }
 
 
